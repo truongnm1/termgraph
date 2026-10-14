@@ -1,0 +1,58 @@
+{
+  "id": "networking-root",
+  "name": "NETWORKING",
+  "description": "The fundamental architecture and communication protocols enabling data exchange between distributed computing systems.",
+  "children": [
+    {
+      "id": "lan",
+      "name": "LAN",
+      "description": "Local Area Network. A computer network interconnecting computers within a limited area such as a residence, school, or office building, offering high data-transfer rates and low latency.",
+      "children": [
+        {
+          "id": "ethernet",
+          "name": "Ethernet",
+          "description": "Standard local network technology defining physical and link layer cabling, frame formats, and MAC addressing mechanisms."
+        },
+        {
+          "id": "wlan",
+          "name": "WLAN",
+          "description": "Wireless Local Area Network linking devices through high-frequency radio spectrum according to IEEE 802.11 standards."
+        }
+      ]
+    },
+    {
+      "id": "vlan",
+      "name": "VLAN",
+      "description": "Virtual Local Area Network. A logical subnetwork that groups together collections of network devices across multiple physical switches into isolated broadcast domains, improving security, manageability, and traffic isolation.",
+      "children": [
+        {
+          "id": "vlan-tagging",
+          "name": "802.1Q Tagging",
+          "description": "Networking standard supporting VLANs on Ethernet by inserting a 4-byte tag field into frame headers to identify VLAN membership."
+        },
+        {
+          "id": "trunking",
+          "name": "Trunking",
+          "description": "A point-to-point link configured between switches or routers that carries traffic for multiple distinct VLANs simultaneously."
+        }
+      ]
+    },
+    {
+      "id": "wan",
+      "name": "WAN",
+      "description": "Wide Area Network. Telecommunications network extending across large geographic regions connecting distributed campuses, data centers, and cloud providers.",
+      "children": [
+        {
+          "id": "sd-wan",
+          "name": "SD-WAN",
+          "description": "Software-Defined Wide Area Network managing hybrid connections to route application traffic dynamically based on bandwidth and jitter."
+        },
+        {
+          "id": "mpls",
+          "name": "MPLS",
+          "description": "Multiprotocol Label Switching directing data packets using short path labels rather than complex IP lookup tables."
+        }
+      ]
+    }
+  ]
+}

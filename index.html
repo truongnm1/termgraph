@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TermGraph • Minimal Tree Knowledge Base</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2'><rect x='3' y='3' width='7' height='7'/><rect x='14' y='14' width='7' height='7'/><path d='M10 6.5h4v11h-4'/></svg>" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- Top Navigation Bar -->
+      <header class="top-navbar">
+        <div class="brand-section">
+          <div class="brand-logo">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="8" y="2" width="8" height="6" rx="2" />
+              <rect x="2" y="16" width="8" height="6" rx="2" />
+              <rect x="14" y="16" width="8" height="6" rx="2" />
+              <path d="M12 8v4" />
+              <path d="M6 12h12" />
+              <path d="M6 12v4" />
+              <path d="M18 12v4" />
+            </svg>
+            <span>TermGraph</span>
+          </div>
+        </div>
+
+        <!-- Global Fast Search -->
+        <div class="search-container">
+          <div class="search-input-wrapper">
+            <span class="search-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter">
+                <circle cx="10.5" cy="10.5" r="7" />
+                <line x1="15.5" y1="15.5" x2="21" y2="21" />
+              </svg>
+            </span>
+            <input
+              type="text"
+              id="search-input"
+              class="search-input"
+              placeholder="Search terms or briefs..."
+              autocomplete="off"
+            />
+            <kbd class="search-kbd">Ctrl+K</kbd>
+          </div>
+          <div class="search-dropdown" id="search-dropdown"></div>
+        </div>
+
+        <!-- Top Right Actions -->
+        <div class="nav-actions">
+          <button class="icon-btn" id="nav-btn-undo" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square">
+              <path d="M9 14L4 9l5-5"/>
+              <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/>
+            </svg>
+          </button>
+          <button class="icon-btn" id="nav-btn-redo" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square">
+              <path d="M15 14l5-5-5-5"/>
+              <path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5v0A5.5 5.5 0 0 0 9.5 20H13"/>
+            </svg>
+          </button>
+          <button class="icon-btn" id="nav-btn-toggle-expand" title="Collapse All Branches">Collapse All</button>
+          <button class="action-btn secondary" id="nav-btn-data" title="Import / Export Knowledge Base">
+            <span>Import / Export</span>
+          </button>
+          <button class="icon-btn" id="nav-btn-settings" title="Settings (Themes & Fonts)" aria-label="Settings">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Graph Workspace -->
+      <main class="canvas-wrapper">
+        <svg id="graph-svg" class="graph-svg"></svg>
+
+        <!-- Floating Bottom-Right Controls -->
+        <div class="canvas-controls">
+          <button class="icon-btn" id="btn-zoom-out" title="Zoom Out (-)">−</button>
+          <span class="zoom-label" id="zoom-readout">100%</span>
+          <button class="icon-btn" id="btn-zoom-in" title="Zoom In (+)">+</button>
+          <button class="icon-btn" id="btn-zoom-reset" title="Reset to 100%">1:1</button>
+          <button class="icon-btn" id="btn-fit-screen" title="Fit Entire Tree to Screen (0)">Fit View</button>
+        </div>
+      </main>
+
+      <!-- Right Sliding Inspector Panel -->
+      <aside id="right-sidebar" class="sidebar right-panel"></aside>
+
+      <!-- Import / Export / Benchmark Modal -->
+      <div id="data-modal" class="modal-overlay"></div>
+
+      <!-- Settings / Themes & Fonts Modal -->
+      <div id="settings-modal" class="modal-overlay"></div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

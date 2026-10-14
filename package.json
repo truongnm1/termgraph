@@ -1,0 +1,27 @@
+{
+  "name": "termgraph",
+  "version": "1.0.0",
+  "description": "Minimal tree knowledge base and hierarchical term graph with orthogonal routing and permanent local disk storage",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "knowledge-base",
+    "mindmap",
+    "tree-graph",
+    "d3-hierarchy",
+    "vite",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "d3-hierarchy": "^3.1.2",
+    "lucide": "^1.57.0",
+    "typescript": "^7.0.2",
+    "vite": "^5.4.14"
+  }
+}
