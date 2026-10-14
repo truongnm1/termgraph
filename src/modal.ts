@@ -94,7 +94,7 @@ export class DataModal {
             </div>
             <div class="form-group" style="margin-top: 14px;">
               <label class="form-label">Raw JSON Data</label>
-              <textarea class="form-textarea code-area" id="textarea-json" rows="12">${this.escape(jsonStr)}</textarea>
+              <textarea class="form-textarea code-area" id="textarea-json" rows="12" spellcheck="false">${this.escape(jsonStr)}</textarea>
             </div>
             <div class="modal-footer-row">
               <button class="action-btn primary" id="btn-apply-json">Apply & Load JSON</button>
@@ -111,7 +111,7 @@ export class DataModal {
             </div>
             <div class="form-group" style="margin-top: 14px;">
               <label class="form-label">Markdown Outline</label>
-              <textarea class="form-textarea code-area" id="textarea-md" rows="12">${this.escape(mdStr)}</textarea>
+              <textarea class="form-textarea code-area" id="textarea-md" rows="12" spellcheck="false">${this.escape(mdStr)}</textarea>
             </div>
             <div class="modal-footer-row">
               <button class="action-btn primary" id="btn-apply-md">Parse & Build Graph</button>
@@ -131,10 +131,10 @@ export class DataModal {
 
             <div class="preset-card">
               <div class="preset-info">
-                <h3>Performance Benchmark (160+ Nodes)</h3>
-                <p>Comprehensive computer science tree with 5 major domains, 25 subfields, and 130+ technical leaf terms to test performance scaling.</p>
+                <h3>Performance Benchmark (190+ Nodes)</h3>
+                <p>Deep multi-tiered architecture tree with 7 levels of vertical depth and controlled 2-sibling branching (190+ terms) to test vertical layout and deep navigation.</p>
               </div>
-              <button class="action-btn primary" id="btn-load-scale-test">Load 160+ Scale Benchmark</button>
+              <button class="action-btn primary" id="btn-load-scale-test">Load Scale Benchmark</button>
             </div>
 
             <div class="preset-card">

@@ -12,6 +12,16 @@
       <!-- Top Navigation Bar -->
       <header class="top-navbar">
         <div class="brand-section">
+          <button class="icon-btn" id="nav-btn-list-view" title="Toggle Outline / List View (L)" aria-label="Toggle List View">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square">
+              <line x1="8" y1="6" x2="21" y2="6"/>
+              <line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/>
+              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+          </button>
           <div class="brand-logo">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="8" y="2" width="8" height="6" rx="2" />
@@ -41,6 +51,7 @@
               class="search-input"
               placeholder="Search terms or briefs..."
               autocomplete="off"
+              spellcheck="false"
             />
             <kbd class="search-kbd">Ctrl+K</kbd>
           </div>
@@ -61,7 +72,6 @@
               <path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5v0A5.5 5.5 0 0 0 9.5 20H13"/>
             </svg>
           </button>
-          <button class="icon-btn" id="nav-btn-toggle-expand" title="Collapse All Branches">Collapse All</button>
           <button class="action-btn secondary" id="nav-btn-data" title="Import / Export Knowledge Base">
             <span>Import / Export</span>
           </button>
@@ -74,11 +84,14 @@
         </div>
       </header>
 
+      <!-- Left Sliding Outline / List View Panel -->
+      <aside id="left-sidebar" class="sidebar left-panel"></aside>
+
       <!-- Main Graph Workspace -->
       <main class="canvas-wrapper">
         <svg id="graph-svg" class="graph-svg"></svg>
 
-        <!-- Floating Bottom-Right Controls -->
+        <!-- Floating Center-Bottom Controls -->
         <div class="canvas-controls">
           <button class="icon-btn" id="btn-zoom-out" title="Zoom Out (-)">−</button>
           <span class="zoom-label" id="zoom-readout">100%</span>

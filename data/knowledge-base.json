@@ -7,11 +7,19 @@
       "id": "lan",
       "name": "LAN",
       "description": "Local Area Network. A computer network interconnecting computers within a limited area such as a residence, school, or office building, offering high data-transfer rates and low latency.",
+      "inputs": "Raw Ethernet frames, Wi-Fi radio packets, DHCP requests",
+      "processing": "MAC address switching, collision avoidance (CSMA/CD), packet filtering",
+      "outputs": "Switched high-speed local data frames, broadcast distribution",
+      "example": "Workstation sends ARP request broadcast to switch -> switch inspects MAC table -> forwards packet to destination port.",
       "children": [
         {
           "id": "ethernet",
           "name": "Ethernet",
-          "description": "Standard local network technology defining physical and link layer cabling, frame formats, and MAC addressing mechanisms."
+          "description": "Standard local network technology defining physical and link layer cabling, frame formats, and MAC addressing mechanisms.",
+          "inputs": "Twisted-pair/fiber electrical signals, 802.3 MAC frames",
+          "processing": "Manchester/PAM encoding, CRC error checking, framing",
+          "outputs": "Decoded payload packets, link status signals",
+          "example": "NIC transmits 1500-byte frame with preamble -> destination card verifies FCS CRC checksum -> passes payload to IP stack."
         },
         {
           "id": "wlan",

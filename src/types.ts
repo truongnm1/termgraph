@@ -2,6 +2,11 @@ export interface KnowledgeNode {
   id: string;
   name: string;
   description: string;
+  hasIpo?: boolean;
+  inputs?: string;
+  processing?: string;
+  outputs?: string;
+  example?: string;
   children?: KnowledgeNode[];
   collapsed?: boolean;
   color?: string;

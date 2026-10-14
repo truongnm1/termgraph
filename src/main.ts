@@ -16,6 +16,7 @@ import {
 } from './storage';
 import { GraphRenderer } from './graph-renderer';
 import { Sidebar } from './sidebar';
+import { ListView } from './list-view';
 import { Tooltip } from './tooltip';
 import { SearchController } from './search';
 import { DataModal } from './modal';
@@ -26,6 +27,7 @@ class App {
   private rootData: KnowledgeNode;
   private renderer!: GraphRenderer;
   private sidebar!: Sidebar;
+  private listView!: ListView;
   private tooltip!: Tooltip;
   private search!: SearchController;
   private modal!: DataModal;
@@ -45,6 +47,8 @@ class App {
       this.rootData = diskData;
       this.history.clear();
       this.renderer.setData(this.rootData, false);
+      this.listView.refresh(this.rootData);
+      this.sidebar.refresh(this.rootData);
       this.search.updateData(this.rootData);
       this.modal.setData(this.rootData);
       this.updateStats();
@@ -95,13 +99,30 @@ class App {
       this.updateUndoRedoUI(canUndo, canRedo);
     });
 
-    // 4. Right Sidebar Detail Panel
+    // 4. Left Sidebar Outline / List View
+    this.listView = new ListView('left-sidebar', {
+      onLocateNode: (nodeId: string) => {
+        this.selectedNodeId = nodeId;
+        this.renderer.setSelectedNode(nodeId);
+        this.renderer.centerNode(nodeId, true);
+        this.updateStats();
+      },
+      onOpenDetail: (nodeId: string) => {
+        this.selectNode(nodeId, true, false);
+      },
+      onClose: () => {
+        this.updateListViewBtnState();
+      }
+    });
+
+    // 5. Right Sidebar Detail Panel
     this.sidebar = new Sidebar('right-sidebar', {
       onUpdate: (id, updates) => {
         this.history.recordTextEdit(this.rootData, this.selectedNodeId);
         this.rootData = updateNode(this.rootData, id, updates);
         saveKnowledgeBase(this.rootData);
         this.renderer.setData(this.rootData, true);
+        this.listView.refresh(this.rootData);
         this.search.updateData(this.rootData);
         this.updateStats();
       },
@@ -117,20 +138,30 @@ class App {
       onSelectNode: id => {
         this.selectNode(id, false);
       },
+      onBadgeHover: (node, clientX, clientY) => {
+        this.tooltip.show(node.name, node.description || '', clientX, clientY);
+      },
+      onBadgeHoverMove: (clientX, clientY) => {
+        this.tooltip.updatePosition(clientX, clientY);
+      },
+      onBadgeHoverEnd: () => {
+        this.tooltip.hide();
+      },
       onClose: () => {
         this.history.commitTextEdit();
         this.selectedNodeId = null;
         this.renderer.setSelectedNode(null);
+        this.tooltip.hide();
       }
     });
 
-    // 5. Search
+    // 6. Search
     this.search = new SearchController('search-input', 'search-dropdown', (nodeId: string) => {
       this.selectNode(nodeId, true);
     });
     this.search.updateData(this.rootData);
 
-    // 6. Modal
+    // 7. Modal
     this.modal = new DataModal(
       'data-modal',
       {
@@ -140,6 +171,7 @@ class App {
           saveKnowledgeBase(this.rootData);
           this.renderer.setData(this.rootData, false);
           this.sidebar.close();
+          this.listView.refresh(this.rootData);
           this.search.updateData(this.rootData);
           this.modal.setData(this.rootData);
           this.updateStats();
@@ -149,7 +181,7 @@ class App {
       this.rootData
     );
 
-    // 7. Settings Modal (Theme presets & Font packs)
+    // 8. Settings Modal (Theme presets & Font packs)
     this.settingsModal = new SettingsModal('settings-modal', {
       onThemeChange: () => {
         // Theme variables update instantly via data-theme attribute
@@ -181,14 +213,69 @@ class App {
     }) as EventListener);
 
     // Close detail panel when clicking outside of it
+    let isMouseDownInsidePanels = false;
+
+    document.addEventListener(
+      'mousedown',
+      (e: MouseEvent) => {
+        const target = e.target as HTMLElement | null;
+        isMouseDownInsidePanels = Boolean(
+          target?.closest('#right-sidebar') ||
+          target?.closest('#left-sidebar') ||
+          target?.closest('#nav-btn-list-view')
+        );
+      },
+      true
+    );
+
+    document.addEventListener(
+      'mouseup',
+      () => {
+        // Clear flag after any trailing native click event has completed
+        setTimeout(() => {
+          isMouseDownInsidePanels = false;
+        }, 100);
+      },
+      true
+    );
+
+    document.addEventListener('dragend', () => {
+      setTimeout(() => {
+        isMouseDownInsidePanels = false;
+      }, 100);
+    });
+
     document.addEventListener('click', (e: MouseEvent) => {
       if (!this.sidebar.isOpen()) return;
+
+      // Ignore click if it originated from a mousedown inside either panel (e.g. text selection, drag-highlight, scrollbar interaction)
+      if (isMouseDownInsidePanels) {
+        isMouseDownInsidePanels = false;
+        return;
+      }
+
+      // Ignore click if user currently has active text selection inside input/textarea in the sidebar
+      const activeEl = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
+      if (activeEl && (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT')) {
+        if (activeEl.closest('#right-sidebar') && activeEl.selectionStart !== activeEl.selectionEnd) {
+          return;
+        }
+      }
+
+      // Ignore click if user has any active text selection
+      const selection = window.getSelection();
+      if (selection && selection.toString().trim().length > 0) {
+        return;
+      }
 
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
-      // Do nothing if clicking inside the sidebar
-      if (target.closest('#right-sidebar')) return;
+      // Do nothing if target was removed from the DOM during click handling
+      if (!target.isConnected) return;
+
+      // Do nothing if clicking inside either sidebar
+      if (target.closest('#right-sidebar') || target.closest('#left-sidebar')) return;
 
       // Do nothing if clicking a node (it handles selecting/opening)
       if (target.closest('.graph-node')) return;
@@ -200,6 +287,7 @@ class App {
         target.closest('#search-dropdown') ||
         target.closest('.search-container') ||
         target.closest('#nav-btn-settings') ||
+        target.closest('#nav-btn-list-view') ||
         target.closest('.canvas-controls')
       ) return;
 
@@ -216,6 +304,7 @@ class App {
     this.selectedNodeId = nodeId;
     this.renderer.setSelectedNode(nodeId);
     this.sidebar.open(this.rootData, nodeId);
+    this.listView.setActiveNode(nodeId);
     this.tooltip.hide();
 
     if (centerView) {
@@ -233,6 +322,8 @@ class App {
     this.rootData = state.data;
     saveKnowledgeBase(this.rootData);
     this.renderer.setData(this.rootData, true);
+    this.listView.refresh(this.rootData);
+    this.sidebar.refresh(this.rootData);
     this.search.updateData(this.rootData);
     this.modal.setData(this.rootData);
     this.updateStats();
@@ -253,6 +344,8 @@ class App {
     this.rootData = state.data;
     saveKnowledgeBase(this.rootData);
     this.renderer.setData(this.rootData, true);
+    this.listView.refresh(this.rootData);
+    this.sidebar.refresh(this.rootData);
     this.search.updateData(this.rootData);
     this.modal.setData(this.rootData);
     this.updateStats();
@@ -289,6 +382,7 @@ class App {
     saveKnowledgeBase(this.rootData);
     this.renderer.setData(this.rootData, true);
     this.sidebar.refresh(this.rootData);
+    this.listView.refresh(this.rootData);
     this.updateExpandCollapseUI();
   }
 
@@ -298,6 +392,7 @@ class App {
     this.rootData = root;
     saveKnowledgeBase(this.rootData);
     this.renderer.setData(this.rootData, true);
+    this.listView.refresh(this.rootData);
     this.search.updateData(this.rootData);
     this.modal.setData(this.rootData);
     this.updateStats();
@@ -315,6 +410,7 @@ class App {
     this.rootData = root;
     saveKnowledgeBase(this.rootData);
     this.renderer.setData(this.rootData, true);
+    this.listView.refresh(this.rootData);
     this.search.updateData(this.rootData);
     this.modal.setData(this.rootData);
     this.updateStats();
@@ -338,6 +434,7 @@ class App {
     this.rootData = root;
     saveKnowledgeBase(this.rootData);
     this.renderer.setData(this.rootData, true);
+    this.listView.refresh(this.rootData);
     this.search.updateData(this.rootData);
     this.modal.setData(this.rootData);
     this.updateStats();
@@ -356,6 +453,7 @@ class App {
     saveKnowledgeBase(this.rootData);
     this.renderer.setData(this.rootData, true);
     this.sidebar.refresh(this.rootData);
+    this.listView.refresh(this.rootData);
     this.updateExpandCollapseUI();
   }
 
@@ -387,9 +485,25 @@ class App {
       this.modal.open();
     });
 
+    document.getElementById('nav-btn-list-view')?.addEventListener('click', () => {
+      this.listView.toggle(this.rootData, this.selectedNodeId);
+      this.updateListViewBtnState();
+    });
+
     document.getElementById('nav-btn-settings')?.addEventListener('click', () => {
       this.settingsModal.open();
     });
+  }
+
+  private updateListViewBtnState(): void {
+    const btn = document.getElementById('nav-btn-list-view');
+    if (btn) {
+      if (this.listView && this.listView.isOpen()) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    }
   }
 
   private bindKeyboardShortcuts(): void {
@@ -409,6 +523,14 @@ class App {
       if (isInputActive) return;
 
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
+      // Toggle List View: L / l
+      if (!isCtrlOrCmd && (e.key === 'l' || e.key === 'L')) {
+        e.preventDefault();
+        this.listView.toggle(this.rootData, this.selectedNodeId);
+        this.updateListViewBtnState();
+        return;
+      }
 
       // Undo: Ctrl+Z / Cmd+Z
       if (isCtrlOrCmd && !e.shiftKey && e.key.toLowerCase() === 'z') {
@@ -438,7 +560,12 @@ class App {
         e.preventDefault();
         this.renderer.zoomOut();
       } else if (e.key === 'Escape') {
-        this.sidebar.close();
+        if (this.sidebar.isOpen()) {
+          this.sidebar.close();
+        } else if (this.listView.isOpen()) {
+          this.listView.close();
+          this.updateListViewBtnState();
+        }
       } else if ((e.key === 'Delete' || e.key === 'Backspace') && this.selectedNodeId) {
         e.preventDefault();
         if (confirm('Delete selected term and its sub-terms?')) {

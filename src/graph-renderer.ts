@@ -178,6 +178,7 @@ export class GraphRenderer {
         return;
       }
 
+      this.cancelAnimation();
       this.isPanning = true;
       this.didPan = false;
       this.startPoint = { x: e.clientX, y: e.clientY };
@@ -256,6 +257,7 @@ export class GraphRenderer {
 
       if (Math.abs(e.deltaY) < 0.1) return;
 
+      this.cancelAnimation();
       const rect = this.svg.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
@@ -352,19 +354,71 @@ export class GraphRenderer {
     this.applyTransform();
   }
 
-  public centerNode(nodeId: string): void {
+  private animFrameId: number | null = null;
+
+  public cancelAnimation(): void {
+    if (this.animFrameId) {
+      cancelAnimationFrame(this.animFrameId);
+      this.animFrameId = null;
+    }
+  }
+
+  public animateTo(targetX: number, targetY: number, targetScale: number, durationMs = 280): void {
+    this.cancelAnimation();
+
+    const startX = this.transform.x;
+    const startY = this.transform.y;
+    const startScale = this.transform.scale;
+    const startTime = performance.now();
+
+    const step = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / durationMs, 1);
+      // Ease-out cubic: 1 - (1 - t)^3
+      const ease = 1 - Math.pow(1 - progress, 3);
+
+      this.transform.x = startX + (targetX - startX) * ease;
+      this.transform.y = startY + (targetY - startY) * ease;
+      this.transform.scale = startScale + (targetScale - startScale) * ease;
+      this.applyTransform();
+
+      if (progress < 1) {
+        this.animFrameId = requestAnimationFrame(step);
+      } else {
+        this.animFrameId = null;
+      }
+    };
+
+    this.animFrameId = requestAnimationFrame(step);
+  }
+
+  public centerNode(nodeId: string, smooth = true): void {
     const node = this.currentNodes.find(n => n.id === nodeId);
     if (!node) return;
 
     const rect = this.svg.getBoundingClientRect();
     const targetScale = Math.max(this.transform.scale, 0.9);
 
-    this.transform.scale = targetScale;
-    const sidebarOffset = window.innerWidth > 768 ? -180 : 0;
-    this.transform.x = rect.width / 2 - node.x * targetScale + sidebarOffset;
-    this.transform.y = rect.height / 2 - node.y * targetScale;
+    let sidebarOffset = 0;
+    if (window.innerWidth > 768) {
+      const leftOpen = document.getElementById('left-sidebar')?.classList.contains('open');
+      const rightOpen = document.getElementById('right-sidebar')?.classList.contains('open');
+      if (leftOpen) sidebarOffset += 160;
+      if (rightOpen) sidebarOffset -= 220;
+    }
 
-    this.applyTransform();
+    const targetX = rect.width / 2 - node.x * targetScale + sidebarOffset;
+    const targetY = rect.height / 2 - node.y * targetScale;
+
+    if (smooth) {
+      this.animateTo(targetX, targetY, targetScale);
+    } else {
+      this.cancelAnimation();
+      this.transform.scale = targetScale;
+      this.transform.x = targetX;
+      this.transform.y = targetY;
+      this.applyTransform();
+    }
   }
 
   public getNodes(): HierarchyPointNode[] {

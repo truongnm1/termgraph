@@ -8,6 +8,9 @@ export interface SidebarCallbacks {
   onDelete: (id: string) => void;
   onSelectNode: (id: string) => void;
   onClose: () => void;
+  onBadgeHover?: (node: KnowledgeNode, clientX: number, clientY: number) => void;
+  onBadgeHoverMove?: (clientX: number, clientY: number) => void;
+  onBadgeHoverEnd?: () => void;
 }
 
 export class Sidebar {
@@ -21,6 +24,11 @@ export class Sidebar {
     if (!el) throw new Error(`Sidebar container #${containerId} not found`);
     this.container = el;
     this.callbacks = callbacks;
+
+    // Prevent any click inside the sidebar from bubbling to document outside-click handler
+    this.container.addEventListener('click', (e: MouseEvent) => {
+      e.stopPropagation();
+    });
   }
 
   public open(root: KnowledgeNode, nodeId: string): void {
@@ -33,6 +41,7 @@ export class Sidebar {
   public close(): void {
     this.currentNodeId = null;
     this.container.classList.remove('open');
+    this.callbacks.onBadgeHoverEnd?.();
     this.callbacks.onClose();
   }
 
@@ -71,15 +80,22 @@ export class Sidebar {
     if (!this.currentNodeId || !this.currentRoot) return;
 
     const search: NodeSearchResult = findNode(this.currentRoot, this.currentNodeId);
-    const { node, parent, path } = search;
+    const { node, path } = search;
 
     if (!node) {
       this.close();
       return;
     }
-
-    const isRoot = !parent;
     const hasChildren = Boolean(node.children && node.children.length > 0);
+    const hasIpo =
+      node.hasIpo !== undefined
+        ? node.hasIpo
+        : Boolean(
+            (node.inputs && node.inputs.trim()) ||
+            (node.processing && node.processing.trim()) ||
+            (node.outputs && node.outputs.trim()) ||
+            (node.example && node.example.trim())
+          );
 
     // Breadcrumbs trail
     const breadcrumbHtml = path
@@ -100,7 +116,6 @@ export class Sidebar {
           child => `
           <div class="panel-child-item" data-child-id="${child.id}">
             <span class="panel-child-name">${this.escape(child.name)}</span>
-            <button class="child-del-btn" data-del-child-id="${child.id}" title="Delete sub-term">✕</button>
           </div>
         `
         )
@@ -128,41 +143,108 @@ export class Sidebar {
           >${this.escape(node.name)}</textarea>
         </div>
 
-        <!-- Soothing Thin Description (Click to view and edit) -->
+        <!-- Soothing Description (Click to view and edit) -->
         <div class="panel-desc-wrapper">
           <textarea
             id="node-desc-input"
             class="panel-desc-input"
             placeholder="Write clear, soothing brief or definition here..."
+            spellcheck="false"
+            autocomplete="off"
           >${this.escape(node.description || '')}</textarea>
         </div>
 
-        <!-- Sub-nodes section if any exist or to add one -->
-        <div class="panel-section">
+        <!-- Section: I/O Model (Inputs - Processing - Outputs - Example) -->
+        <div class="panel-section panel-ipo-section ${!hasIpo ? 'panel-section-compact' : ''}">
+          <div class="panel-section-header">
+            <span class="panel-section-title">I/O Model</span>
+            <label class="panel-toggle-wrapper" title="Toggle I/O model for this term">
+              <span class="panel-toggle-text">${hasIpo ? 'ON' : 'OFF'}</span>
+              <input type="checkbox" id="sidebar-toggle-ipo" ${hasIpo ? 'checked' : ''} />
+              <span class="panel-toggle-switch"></span>
+            </label>
+          </div>
+          ${
+            hasIpo
+              ? `
+          <div class="ipo-container">
+            <!-- Inputs -->
+            <div class="ipo-block">
+              <div class="ipo-header">
+                <span class="ipo-tag ipo-tag-in">INPUTS</span>
+              </div>
+              <textarea
+                id="node-inputs-input"
+                class="ipo-textarea"
+                rows="1"
+                placeholder="Enter inputs..."
+                spellcheck="false"
+                autocomplete="off"
+              >${this.escape(node.inputs || '')}</textarea>
+            </div>
+
+            <!-- Processing -->
+            <div class="ipo-block">
+              <div class="ipo-header">
+                <span class="ipo-tag ipo-tag-proc">PROCESSING</span>
+              </div>
+              <textarea
+                id="node-processing-input"
+                class="ipo-textarea"
+                rows="1"
+                placeholder="Enter processing..."
+                spellcheck="false"
+                autocomplete="off"
+              >${this.escape(node.processing || '')}</textarea>
+            </div>
+
+            <!-- Outputs -->
+            <div class="ipo-block">
+              <div class="ipo-header">
+                <span class="ipo-tag ipo-tag-out">OUTPUTS</span>
+              </div>
+              <textarea
+                id="node-outputs-input"
+                class="ipo-textarea"
+                rows="1"
+                placeholder="Enter outputs..."
+                spellcheck="false"
+                autocomplete="off"
+              >${this.escape(node.outputs || '')}</textarea>
+            </div>
+
+            <!-- Example -->
+            <div class="ipo-block">
+              <div class="ipo-header">
+                <span class="ipo-tag ipo-tag-example">EXAMPLE</span>
+              </div>
+              <textarea
+                id="node-example-input"
+                class="ipo-textarea"
+                rows="1"
+                placeholder="Concrete walk-through based on the I/O above..."
+                spellcheck="false"
+                autocomplete="off"
+              >${this.escape(node.example || '')}</textarea>
+            </div>
+          </div>
+          `
+              : ''
+          }
+        </div>
+
+        <!-- Sub-nodes section - sleek compact footprint -->
+        <div class="panel-section ${!hasChildren ? 'panel-section-compact' : ''}">
           <div class="panel-section-header">
             <span class="panel-section-title">Sub-Terms (${node.children ? node.children.length : 0})</span>
             <button class="text-btn" id="sidebar-add-child-btn">+ Add Sub-Node</button>
           </div>
-          <div class="panel-children-grid">
-            ${childrenHtml || '<div class="panel-empty-text">No sub-terms yet.</div>'}
-          </div>
+          ${hasChildren ? `<div class="panel-children-grid">${childrenHtml}</div>` : ''}
         </div>
       </div>
 
-      <!-- Footer Actions & Hotkeys Guide -->
+      <!-- Footer: Hotkeys Guide -->
       <div class="panel-footer">
-        <div class="panel-btn-row">
-          <button class="action-btn secondary" id="sidebar-add-sibling-btn" ${isRoot ? 'style="display:none;"' : ''}>
-            + Sibling
-          </button>
-          ${
-            !isRoot
-              ? `<button class="action-btn danger-text" id="sidebar-delete-btn">
-                  Delete
-                </button>`
-              : ''
-          }
-        </div>
         <div class="panel-hotkeys-guide">
           <span><kbd>Tab</kbd> Sub-node</span>
           <span><kbd>Enter</kbd> Sibling</span>
@@ -171,16 +253,19 @@ export class Sidebar {
       </div>
     `;
 
-    this.bindEvents(node.id, isRoot);
+    this.bindEvents(node);
   }
 
-  private bindEvents(nodeId: string, isRoot: boolean): void {
+  private bindEvents(node: KnowledgeNode): void {
+    const nodeId = node.id;
+
     // Close button
     this.container.querySelector('#sidebar-close')?.addEventListener('click', () => this.close());
 
     // Breadcrumb clicks
     this.container.querySelectorAll('.crumb.clickable').forEach(el => {
-      el.addEventListener('click', () => {
+      el.addEventListener('click', (e: Event) => {
+        e.stopPropagation();
         const targetId = el.getAttribute('data-crumb-id');
         if (targetId) this.callbacks.onSelectNode(targetId);
       });
@@ -202,48 +287,113 @@ export class Sidebar {
       });
     }
 
-    // Real-time description input
+    // Real-time description input (natural auto-height in unified document scroll)
     const descInput = this.container.querySelector('#node-desc-input') as HTMLTextAreaElement;
-    descInput?.addEventListener('input', () => {
-      this.callbacks.onUpdate(nodeId, { description: descInput.value });
-    });
+    if (descInput) {
+      this.adjustDescHeight(descInput);
+      descInput.addEventListener('input', () => {
+        this.adjustDescHeight(descInput);
+        this.callbacks.onUpdate(nodeId, { description: descInput.value });
+      });
+    }
+
+    // Toggle I/O Model
+    const toggleIpo = this.container.querySelector('#sidebar-toggle-ipo') as HTMLInputElement;
+    if (toggleIpo) {
+      toggleIpo.addEventListener('change', () => {
+        const enabled = toggleIpo.checked;
+        node.hasIpo = enabled;
+        this.callbacks.onUpdate(nodeId, { hasIpo: enabled });
+        this.render();
+        if (enabled) {
+          const firstInput = this.container.querySelector('#node-inputs-input') as HTMLTextAreaElement;
+          firstInput?.focus();
+        }
+      });
+    }
+
+    // Real-time Inputs - Processing - Outputs - Example
+    const inputsInput = this.container.querySelector('#node-inputs-input') as HTMLTextAreaElement;
+    if (inputsInput) {
+      this.adjustAutoHeight(inputsInput, 44);
+      inputsInput.addEventListener('input', () => {
+        this.adjustAutoHeight(inputsInput, 44);
+        this.callbacks.onUpdate(nodeId, { inputs: inputsInput.value });
+      });
+    }
+
+    const procInput = this.container.querySelector('#node-processing-input') as HTMLTextAreaElement;
+    if (procInput) {
+      this.adjustAutoHeight(procInput, 44);
+      procInput.addEventListener('input', () => {
+        this.adjustAutoHeight(procInput, 44);
+        this.callbacks.onUpdate(nodeId, { processing: procInput.value });
+      });
+    }
+
+    const outputsInput = this.container.querySelector('#node-outputs-input') as HTMLTextAreaElement;
+    if (outputsInput) {
+      this.adjustAutoHeight(outputsInput, 44);
+      outputsInput.addEventListener('input', () => {
+        this.adjustAutoHeight(outputsInput, 44);
+        this.callbacks.onUpdate(nodeId, { outputs: outputsInput.value });
+      });
+    }
+
+    const exampleInput = this.container.querySelector('#node-example-input') as HTMLTextAreaElement;
+    if (exampleInput) {
+      this.adjustAutoHeight(exampleInput, 44);
+      exampleInput.addEventListener('input', () => {
+        this.adjustAutoHeight(exampleInput, 44);
+        this.callbacks.onUpdate(nodeId, { example: exampleInput.value });
+      });
+    }
+
+    const panelContent = this.container.querySelector('.panel-content');
+
+    // Hide hint box when scrolling panel
+    panelContent?.addEventListener('scroll', () => {
+      this.callbacks.onBadgeHoverEnd?.();
+    }, { passive: true });
 
     // Add child
-    this.container.querySelector('#sidebar-add-child-btn')?.addEventListener('click', () => {
+    this.container.querySelector('#sidebar-add-child-btn')?.addEventListener('click', (e: Event) => {
+      e.stopPropagation();
       this.callbacks.onAddChild(nodeId);
     });
 
-    // Add sibling
-    this.container.querySelector('#sidebar-add-sibling-btn')?.addEventListener('click', () => {
-      this.callbacks.onAddSibling(nodeId);
-    });
-
-    // Delete node
-    this.container.querySelector('#sidebar-delete-btn')?.addEventListener('click', () => {
-      if (!isRoot && confirm('Delete this term and its sub-terms?')) {
-        this.callbacks.onDelete(nodeId);
-        this.close();
+    // Map children for fast O(1) lookup during badge hover
+    const childMap = new Map<string, KnowledgeNode>();
+    if (node.children) {
+      for (const child of node.children) {
+        childMap.set(child.id, child);
       }
-    });
+    }
 
-    // Click child item
+    // Sub-term badges: click to navigate, hover to preview hint box
     this.container.querySelectorAll('.panel-child-item').forEach(el => {
+      const childId = el.getAttribute('data-child-id');
+      const child = childId ? childMap.get(childId) : null;
+
       el.addEventListener('click', (e: Event) => {
-        if ((e.target as HTMLElement).classList.contains('child-del-btn')) return;
-        const childId = el.getAttribute('data-child-id');
+        e.stopPropagation();
+        this.callbacks.onBadgeHoverEnd?.();
         if (childId) this.callbacks.onSelectNode(childId);
       });
-    });
 
-    // Delete child button
-    this.container.querySelectorAll('.child-del-btn').forEach(btn => {
-      btn.addEventListener('click', (e: Event) => {
-        e.stopPropagation();
-        const childId = btn.getAttribute('data-del-child-id');
-        if (childId && confirm('Delete this sub-term?')) {
-          this.callbacks.onDelete(childId);
-        }
-      });
+      if (child) {
+        el.addEventListener('mouseenter', ((e: MouseEvent) => {
+          this.callbacks.onBadgeHover?.(child, e.clientX, e.clientY);
+        }) as EventListener);
+
+        el.addEventListener('mousemove', ((e: MouseEvent) => {
+          this.callbacks.onBadgeHoverMove?.(e.clientX, e.clientY);
+        }) as EventListener);
+
+        el.addEventListener('mouseleave', () => {
+          this.callbacks.onBadgeHoverEnd?.();
+        });
+      }
     });
   }
 
@@ -267,6 +417,16 @@ export class Sidebar {
 
     textarea.style.height = 'auto';
     textarea.style.height = `${textarea.scrollHeight}px`;
+  }
+
+  private adjustDescHeight(textarea: HTMLTextAreaElement): void {
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.max(100, textarea.scrollHeight)}px`;
+  }
+
+  private adjustAutoHeight(textarea: HTMLTextAreaElement, minHeight = 44): void {
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.max(minHeight, textarea.scrollHeight)}px`;
   }
 
   private escape(str: string): string {

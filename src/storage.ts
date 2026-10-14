@@ -119,6 +119,10 @@ export function addChildNode(
     id: 'node-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 6),
     name: newNodeData?.name || 'New Sub-Term',
     description: newNodeData?.description || 'Add a clear description for this term...',
+    inputs: newNodeData?.inputs || '',
+    processing: newNodeData?.processing || '',
+    outputs: newNodeData?.outputs || '',
+    example: newNodeData?.example || '',
     children: []
   };
 
@@ -146,6 +150,10 @@ export function addSiblingNode(
     id: 'node-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 6),
     name: 'New Sibling Term',
     description: 'Add a clear description for this term...',
+    inputs: '',
+    processing: '',
+    outputs: '',
+    example: '',
     children: []
   };
 
@@ -262,8 +270,15 @@ export function exportToMarkdown(root: KnowledgeNode): string {
     if (node.description && node.description.trim()) {
       lines.push('');
       lines.push(node.description.trim());
-      lines.push('');
     }
+    if (node.inputs || node.processing || node.outputs || node.example) {
+      lines.push('');
+      if (node.inputs && node.inputs.trim()) lines.push(`- **Inputs**: ${node.inputs.trim()}`);
+      if (node.processing && node.processing.trim()) lines.push(`- **Processing**: ${node.processing.trim()}`);
+      if (node.outputs && node.outputs.trim()) lines.push(`- **Outputs**: ${node.outputs.trim()}`);
+      if (node.example && node.example.trim()) lines.push(`- **Example**: ${node.example.trim()}`);
+    }
+    lines.push('');
     if (node.children) {
       for (const child of node.children) {
         walk(child, depth + 1);
@@ -288,11 +303,32 @@ export function importFromMarkdown(md: string): KnowledgeNode {
       const level = match[1].length;
       const title = match[2].trim();
 
-      // Collect description text following this heading until next heading
+      // Collect description and IPO text following this heading until next heading
       const descLines: string[] = [];
+      let inputs = '';
+      let processing = '';
+      let outputs = '';
+      let example = '';
+
       while (i + 1 < lines.length && !lines[i + 1].match(/^#{1,6}\s+/)) {
         i++;
-        descLines.push(lines[i]);
+        const currentLine = lines[i];
+        const inMatch = currentLine.match(/^-\s+\*\*Inputs\*\*:\s*(.*)$/i);
+        const procMatch = currentLine.match(/^-\s+\*\*Processing\*\*:\s*(.*)$/i);
+        const outMatch = currentLine.match(/^-\s+\*\*Outputs\*\*:\s*(.*)$/i);
+        const exMatch = currentLine.match(/^-\s+\*\*Example\*\*:\s*(.*)$/i);
+
+        if (inMatch) {
+          inputs = inMatch[1].trim();
+        } else if (procMatch) {
+          processing = procMatch[1].trim();
+        } else if (outMatch) {
+          outputs = outMatch[1].trim();
+        } else if (exMatch) {
+          example = exMatch[1].trim();
+        } else {
+          descLines.push(currentLine);
+        }
       }
 
       const description = descLines.join('\n').trim();
@@ -301,6 +337,11 @@ export function importFromMarkdown(md: string): KnowledgeNode {
         id: 'node-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 6),
         name: title,
         description: description || 'No description provided.',
+        inputs: inputs || undefined,
+        processing: processing || undefined,
+        outputs: outputs || undefined,
+        example: example || undefined,
+        hasIpo: Boolean(inputs || processing || outputs || example),
         children: []
       };
 
